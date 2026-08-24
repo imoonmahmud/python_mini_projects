@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Resource, Api, reqparse, fields, marshal_with, abort
 from datetime import datetime, timezone
@@ -47,7 +47,19 @@ postFields = {
 class Posts(Resource):
     @marshal_with(postFields)
     def get(self):
-        posts = PostModel.query.all()
+        term = request.args.get('term')
+
+        if term:
+            search = f'%{term}%'
+            posts = PostModel.query.filter(
+                db.or_(
+                    PostModel.title.ilike(search),
+                    PostModel.content.ilike(search),
+                    PostModel.category.ilike(search)
+                )
+            ).all()
+        else:
+            posts = PostModel.query.all()
         return posts
 
     @marshal_with(postFields)
