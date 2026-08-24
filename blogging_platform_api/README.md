@@ -52,4 +52,4 @@ The search checks the `title`, `content`, and `category` fields.
 
 ## Acknowledgements
 
-Core project idea from [roadmap.sh](https://roadmap.sh/projects/blogging-platform-api).
+Core project idea from [roadmap.sh](https://roadmap.sh/projects/blogging-platform-api)
