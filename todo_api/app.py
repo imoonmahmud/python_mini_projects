@@ -1,13 +1,17 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, abort
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+from flask_wtf.csrf import CSRFProtect
 
 from models import db, User, Task
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///todo.db'
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SECRET_KEY'] = 'imoonmahmud'
 db.init_app(app)
+csrf = CSRFProtect(app)
 
 @app.route('/')
 def home():
@@ -42,7 +46,6 @@ def login():
         password = request.form['password']
 
         user = User.query.filter_by(email=email).first()
-
         if user and check_password_hash(user.password_hash, password):
             session['user_id'] = user.id
             flash('Logged in successfully.')
@@ -50,7 +53,6 @@ def login():
         else:
             flash('Invalid email and password.')
             return redirect(url_for('login'))
-
     return render_template('login.html')
 
 @app.route('/logout')
@@ -58,7 +60,6 @@ def logout():
     session.pop('user_id', None)
     flash('Logged out.')
     return redirect(url_for('home'))
-
 
 
 
@@ -92,8 +93,7 @@ def add_task():
 def toggle_task(task_id):
     task = Task.query.get_or_404(task_id)
     if task.user_id != session['user_id']:
-        flash("You can't modify that task.")
-        return redirect(url_for('tasks'))
+        abort(404)
     task.done = not task.done
     db.session.commit()
     return redirect(url_for('tasks'))
@@ -103,14 +103,12 @@ def toggle_task(task_id):
 def edit_task(task_id):
     task = Task.query.get_or_404(task_id)
     if task.user_id != session['user_id']:
-        flash("You can't edit that task.")
-        return redirect(url_for('tasks'))
+        abort(404)
 
     if request.method == 'POST':
         task.title = request.form['title']
         db.session.commit()
         return redirect(url_for('tasks'))
-
     return render_template('edit_task.html', task=task)
 
 @app.route('/tasks/<int:task_id>/delete', methods=['POST'])
@@ -118,11 +116,18 @@ def edit_task(task_id):
 def delete_task(task_id):
     task = Task.query.get_or_404(task_id)
     if task.user_id != session['user_id']:
-        flash("You can't delete that task.")
-        return redirect(url_for('tasks'))
+        abort(404)
     db.session.delete(task)
     db.session.commit()
     return redirect(url_for('tasks'))
+
+@app.errorhandler(404)
+def not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def server_error(e):
+    return render_template('500.html'), 500
 
 if __name__ == '__main__':
     with app.app_context():

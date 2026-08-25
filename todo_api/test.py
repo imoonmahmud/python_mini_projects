@@ -1,6 +1,6 @@
 from app import app
-from models import db, User
+from models import db, User, Task
 with app.app_context():
-    users = User.query.all()
-    for u in users:
-        print(u.id, u.email, u.name)
+    tasks = Task.query.all()
+    for task in tasks:
+        print(task.id, task.title, task.done, task.created_at)
