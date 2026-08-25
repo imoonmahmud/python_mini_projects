@@ -49,7 +49,3 @@ The search checks the `title`, `content`, and `category` fields.
   "tags": ["python", "programming"]
 }
 ```
-
-## Acknowledgements
-
-Core project idea from [roadmap.sh](https://roadmap.sh/projects/blogging-platform-api)
