@@ -7,7 +7,8 @@ from models import db, User, Expense, Category
 from validators import (
     login_required,
     validate_register,
-    validate_create_expense
+    validate_create_expense,
+    validate_update_expense
 )
 
 app = Flask(__name__)
@@ -96,6 +97,50 @@ def create_expense(user):
             'owner': new_expense.user.username
         }
     }, 201
+
+
+@app.route('/expenses/<int:id>', methods=['DELETE'])
+@login_required
+def delete_expense(user, id):
+    data = Expense.query.filter_by(id=id, user_id=user).first()
+    if not data:
+        raise ValueError(f"Expense with expense_id '{id}' doesn't exists")
+
+    db.session.delete(data)
+    db.session.commit()
+    return '', 204
+
+@app.route('/expenses/<int:id>', methods=['PUT'])
+@login_required
+def update_expense(user, id):
+    data = Expense.query.filter_by(id=id, user_id=user).first()
+    if not data:
+        raise ValueError(f"Expense with expense_id '{id}' doesn't exists")
+
+    updated_expense = request.get_json()
+    validate_update_expense(updated_expense)
+
+    category_data = Category.query.filter_by(name=updated_expense['category']).first()
+    if not category_data:
+        category_data = Category(name=updated_expense['category'])
+        db.session.add(category_data)
+        db.session.commit()
+
+    data.title = updated_expense['title']
+    data.amount = updated_expense['amount']
+    data.category_id = category_data.id
+    db.session.commit()
+
+    return {
+        'message': 'Expense Updated',
+        'data': {
+            "id": data.id,
+            "title": data.title,
+            "amount": data.amount,
+            "created_at": data.created_at,
+            "owner": data.user.username
+        }
+    }, 200
 
 
 if __name__ == '__main__':
