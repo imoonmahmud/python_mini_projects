@@ -15,7 +15,6 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
 db.init_app(app)
 SECRET_KEY = 'imoonmahmud'
-
 def now_utc():
     return datetime.now(timezone.utc)
 
@@ -110,6 +109,7 @@ def delete_expense(user, id):
     db.session.commit()
     return '', 204
 
+
 @app.route('/expenses/<int:id>', methods=['PUT'])
 @login_required
 def update_expense(user, id):
@@ -141,6 +141,22 @@ def update_expense(user, id):
             "owner": data.user.username
         }
     }, 200
+
+
+@app.route('/expenses', methods=['GET'])
+@login_required
+def get_expenses(user):
+    data = Expense.query.filter_by(user_id=user).all()
+    expenses = []
+    for expense in data:
+        expenses.append({
+            "id": expense.id,
+            "title": expense.title,
+            "amount": expense.amount,
+            "created_at": expense.created_at,
+        })
+    return {'data': expenses}, 200
+
 
 
 if __name__ == '__main__':
