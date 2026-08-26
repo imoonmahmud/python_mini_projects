@@ -3,11 +3,11 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 from datetime import datetime, timezone, timedelta
 
-
-
-from models import db, User
+from models import db, User, Expense, Category
 from validators import (
-    validate_register
+    login_required,
+    validate_register,
+    validate_create_expense
 )
 
 app = Flask(__name__)
@@ -40,10 +40,10 @@ def register():
 
     return {'message': 'User created successfully!'}, 201
 
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
-    validate_register(data)
 
     user_data = User.query.filter_by(username=data['username']).first()
     if user_data and check_password_hash(user_data.password_hash, data['password']):
@@ -61,6 +61,41 @@ def login():
             'token': token
         }
     raise ValueError('Invalid username or password.')
+
+
+@app.route('/expenses/create', methods=['POST'])
+@login_required
+def create_expense(user):
+    data = request.get_json()
+    validate_create_expense(data)
+
+    category = data.get('category', 'uncategorized')
+
+    category_data = Category.query.filter_by(name=category).first()
+    if not category_data:
+        category_data = Category(name=category)
+        db.session.add(category_data)
+        db.session.commit()
+
+    new_expense = Expense(
+        title=data['title'],
+        category_id = category_data.id,
+        amount = data['amount'],
+        user_id = int(user)
+    )
+    db.session.add(new_expense)
+    db.session.commit()
+
+    return {
+        'message': 'Expense Created!',
+        'data': {
+            'id': new_expense.id,
+            'title': new_expense.title,
+            'amount': new_expense.amount,
+            'created_at': new_expense.created_at,
+            'owner': new_expense.user.username
+        }
+    }, 201
 
 
 if __name__ == '__main__':
